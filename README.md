@@ -53,3 +53,20 @@ GitHub Actions lints Python and JavaScript, builds the React production bundle, 
 ## Provenance
 
 Starter and fixture data: https://github.com/ibm-developer-skills-network/xrwvm-fullstack_developer_capstone . Preserve the included Apache license. Company/team names and contacts are demonstration data. Source screenshots and grading evidence must be captured from real runs; local screenshots are not cloud-deployment evidence.
+
+## Course cloud deployment
+
+The Skills Network lab scripts deploy the sentiment analyzer on Code Engine and
+Django, the Express API, and MongoDB on Kubernetes. Run
+`bash scripts/deploy_sentiment.sh` in the enrolled Code Engine lab. In the
+Kubernetes lab, set `SENTIMENT_URL` to the verified HTTPS endpoint and `APP_HOST`
+to the exact hostname shown by Launch Application for port 8000, then run
+`bash scripts/deploy_kubernetes.sh`.
+
+The Kubernetes manifest uses persistent volumes for both databases, private
+services and network policies for MongoDB and Express, generated Kubernetes
+Secrets, immutable application image digests, resource limits, health probes,
+and secure cookies behind the lab HTTPS proxy. Do not enable
+`TRUST_HTTPS_PROXY` on a directly exposed server. The deployment scripts preserve
+existing resources and save actual runtime evidence under ignored `evidence/`.
+The free lab is temporary; this is a course deployment, not a production SLA.

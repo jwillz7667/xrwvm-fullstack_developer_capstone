@@ -1,0 +1,1 @@
+{"version":"2.0.0","tasks":[{"label":"Deploy Capstone sentiment to Code Engine","type":"shell","command":"bash scripts/deploy_sentiment.sh","problemMatcher":[]},{"label":"Deploy Capstone to Kubernetes","type":"shell","command":"bash scripts/deploy_kubernetes.sh","problemMatcher":[]}]}

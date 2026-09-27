@@ -134,3 +134,7 @@ server/staticfiles/
 .local-env
 .demo-credentials.json
 evidence/
+
+.cloud-secrets
+.cloud-state/
+*-evidence.tar.gz

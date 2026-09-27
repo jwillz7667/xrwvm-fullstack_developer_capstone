@@ -1,0 +1,534 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "openroad-mongo-data",
+        "labels": {
+          "project": "openroad-capstone"
+        }
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "1Gi"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "openroad-web-data",
+        "labels": {
+          "project": "openroad-capstone"
+        }
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "1Gi"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "openroad-mongo",
+        "labels": {
+          "project": "openroad-capstone"
+        }
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "openroad-mongo"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "openroad-mongo",
+              "project": "openroad-capstone"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "openroad-mongo",
+                "image": "mongo:8.0",
+                "ports": [
+                  {
+                    "containerPort": 27017
+                  }
+                ],
+                "env": [
+                  {
+                    "name": "MONGO_INITDB_ROOT_USERNAME",
+                    "value": "openroad"
+                  },
+                  {
+                    "name": "MONGO_INITDB_ROOT_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "openroad-secrets",
+                        "key": "MONGO_PASSWORD"
+                      }
+                    }
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "10m",
+                    "memory": "256Mi"
+                  },
+                  "limits": {
+                    "cpu": "250m",
+                    "memory": "256Mi"
+                  }
+                },
+                "securityContext": {
+                  "allowPrivilegeEscalation": false,
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  }
+                },
+                "args": [
+                  "--wiredTigerCacheSizeGB",
+                  "0.25"
+                ],
+                "volumeMounts": [
+                  {
+                    "name": "data",
+                    "mountPath": "/data/db"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "openroad-mongo-data"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "openroad-mongo",
+        "labels": {
+          "project": "openroad-capstone"
+        }
+      },
+      "spec": {
+        "selector": {
+          "app": "openroad-mongo"
+        },
+        "ports": [
+          {
+            "port": 27017,
+            "targetPort": 27017
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "openroad-dealers",
+        "labels": {
+          "project": "openroad-capstone"
+        }
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "openroad-dealers"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "openroad-dealers",
+              "project": "openroad-capstone"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "openroad-dealers",
+                "image": "${DEALERS_IMAGE}",
+                "ports": [
+                  {
+                    "containerPort": 3030
+                  }
+                ],
+                "env": [
+                  {
+                    "name": "MONGODB_URI",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "openroad-secrets",
+                        "key": "MONGODB_URI"
+                      }
+                    }
+                  },
+                  {
+                    "name": "SERVICE_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "openroad-secrets",
+                        "key": "SERVICE_KEY"
+                      }
+                    }
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "10m",
+                    "memory": "128Mi"
+                  },
+                  "limits": {
+                    "cpu": "250m",
+                    "memory": "128Mi"
+                  }
+                },
+                "securityContext": {
+                  "allowPrivilegeEscalation": false,
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  }
+                },
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 3030,
+                    "httpHeaders": [
+                      {
+                        "name": "Host",
+                        "value": "localhost"
+                      }
+                    ]
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 10
+                },
+                "livenessProbe": {
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 3030,
+                    "httpHeaders": [
+                      {
+                        "name": "Host",
+                        "value": "localhost"
+                      }
+                    ]
+                  },
+                  "initialDelaySeconds": 60,
+                  "periodSeconds": 20
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "openroad-dealers",
+        "labels": {
+          "project": "openroad-capstone"
+        }
+      },
+      "spec": {
+        "selector": {
+          "app": "openroad-dealers"
+        },
+        "ports": [
+          {
+            "port": 3030,
+            "targetPort": 3030
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "openroad-web",
+        "labels": {
+          "project": "openroad-capstone"
+        }
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "openroad-web"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "openroad-web",
+              "project": "openroad-capstone"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "openroad-web",
+                "image": "${WEB_IMAGE}",
+                "ports": [
+                  {
+                    "containerPort": 8000
+                  }
+                ],
+                "env": [
+                  {
+                    "name": "DJANGO_SECRET_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "openroad-secrets",
+                        "key": "DJANGO_SECRET_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "name": "SERVICE_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "openroad-secrets",
+                        "key": "SERVICE_KEY"
+                      }
+                    }
+                  },
+                  {
+                    "name": "BACKEND_URL",
+                    "value": "http://openroad-dealers:3030"
+                  },
+                  {
+                    "name": "SENTIMENT_URL",
+                    "value": "${SENTIMENT_URL}"
+                  },
+                  {
+                    "name": "ALLOWED_HOSTS",
+                    "value": "${APP_HOST},localhost,127.0.0.1"
+                  },
+                  {
+                    "name": "CSRF_TRUSTED_ORIGINS",
+                    "value": "https://${APP_HOST}"
+                  },
+                  {
+                    "name": "SECURE_COOKIES",
+                    "value": "1"
+                  },
+                  {
+                    "name": "TRUST_HTTPS_PROXY",
+                    "value": "1"
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "10m",
+                    "memory": "256Mi"
+                  },
+                  "limits": {
+                    "cpu": "250m",
+                    "memory": "256Mi"
+                  }
+                },
+                "securityContext": {
+                  "allowPrivilegeEscalation": false,
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  }
+                },
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 8000,
+                    "httpHeaders": [
+                      {
+                        "name": "Host",
+                        "value": "localhost"
+                      }
+                    ]
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 10
+                },
+                "livenessProbe": {
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 8000,
+                    "httpHeaders": [
+                      {
+                        "name": "Host",
+                        "value": "localhost"
+                      }
+                    ]
+                  },
+                  "initialDelaySeconds": 60,
+                  "periodSeconds": 20
+                },
+                "volumeMounts": [
+                  {
+                    "name": "data",
+                    "mountPath": "/data"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "openroad-web-data"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "openroad-web",
+        "labels": {
+          "project": "openroad-capstone"
+        }
+      },
+      "spec": {
+        "selector": {
+          "app": "openroad-web"
+        },
+        "ports": [
+          {
+            "port": 8000,
+            "targetPort": 8000
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "openroad-mongo",
+        "labels": {
+          "project": "openroad-capstone"
+        }
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "app": "openroad-mongo"
+          }
+        },
+        "policyTypes": [
+          "Ingress"
+        ],
+        "ingress": [
+          {
+            "from": [
+              {
+                "podSelector": {
+                  "matchLabels": {
+                    "app": "openroad-dealers"
+                  }
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 27017
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "openroad-dealers",
+        "labels": {
+          "project": "openroad-capstone"
+        }
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "app": "openroad-dealers"
+          }
+        },
+        "policyTypes": [
+          "Ingress"
+        ],
+        "ingress": [
+          {
+            "from": [
+              {
+                "podSelector": {
+                  "matchLabels": {
+                    "app": "openroad-web"
+                  }
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 3030
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
