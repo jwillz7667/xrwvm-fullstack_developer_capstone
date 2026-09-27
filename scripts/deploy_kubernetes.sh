@@ -32,12 +32,14 @@ PY
  kubectl create secret generic openroad-secrets --from-env-file=.cloud-secrets
  rm .cloud-secrets
 fi
-TASK_TAG="$(git rev-parse --short HEAD)"
+TASK_REVISION="$(git rev-parse "${IMAGE_REVISION:-HEAD}^{commit}")"
+# Packaging-only changes may reuse images, but application code must be identical.
+git diff --quiet "$TASK_REVISION" HEAD -- server ':!server/deployment.yaml' || { echo 'Image revision differs from application source.'; exit 1; }
+TASK_TAG="$(git rev-parse --short "$TASK_REVISION")"
 for TASK_PART in web dealers; do
  TASK_DIR=server
  [[ "$TASK_PART" = dealers ]] && TASK_DIR=server/database
  TASK_IMAGE="us.icr.io/$TASK_NAMESPACE/openroad-$TASK_PART:$TASK_TAG"
- TASK_REVISION="$(git rev-parse HEAD)"
  if [[ "$(docker image inspect --format='{{index .Config.Labels "org.opencontainers.image.revision"}}' "$TASK_IMAGE" 2>/dev/null || true)" != "$TASK_REVISION" ]]; then
   docker build --label "org.opencontainers.image.revision=$TASK_REVISION" -t "$TASK_IMAGE" "$TASK_DIR"
  else
@@ -51,8 +53,21 @@ python3 - <<'PY'
 import json,os,string
 from pathlib import Path
 text=string.Template(Path('server/deployment.yaml').read_text()).substitute({k:os.environ[k] for k in ['WEB_IMAGE','DEALERS_IMAGE','SENTIMENT_URL','APP_HOST']})
-json.loads(text)
-Path('evidence/deployment.yaml').write_text(text)
+manifest=json.loads(text)
+if os.environ.get('LAB_EPHEMERAL') == '1':
+ # The enrolled sandbox has zero PVC quota and does not permit network policies.
+ manifest['items']=[item for item in manifest['items'] if item['kind'] not in {'PersistentVolumeClaim','NetworkPolicy'}]
+ for item in manifest['items']:
+  if item['kind']=='Deployment':
+   pod=item['spec']['template']['spec']
+   for volume in pod.get('volumes',[]):
+    if 'persistentVolumeClaim' in volume:
+     del volume['persistentVolumeClaim']
+     volume['emptyDir']={'sizeLimit':'1Gi'}
+   if pod.get('volumes'):
+    pod['securityContext']={'fsGroup':10001}
+ print('Temporary course-lab storage enabled; data lasts for the lifetime of each pod.')
+Path('evidence/deployment.yaml').write_text(json.dumps(manifest,indent=2)+'\n')
 PY
 kubectl apply -f evidence/deployment.yaml
 for TASK_DEPLOYMENT in openroad-mongo openroad-dealers openroad-web; do

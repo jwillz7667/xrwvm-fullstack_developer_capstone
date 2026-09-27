@@ -71,4 +71,6 @@ and secure cookies behind the lab HTTPS proxy. Do not enable
 existing resources and save actual runtime evidence under ignored `evidence/`.
 The free lab is temporary; this is a course deployment, not a production SLA.
 
-If the lab image mirror cannot build the maintained runtime, the same Linux/amd64 images may be built outside the lab and transferred as a checksum-verified Docker archive. The deployment script only reuses a prebuilt image when its OCI revision label exactly matches the checked-out source commit; it then pushes the images to the lab ICR registry before Kubernetes deployment.
+If the lab image mirror cannot build the maintained runtime, the same Linux/amd64 images may be built outside the lab and transferred as a checksum-verified Docker archive. The deployment script only reuses a prebuilt image when its OCI revision label matches the selected source commit (`IMAGE_REVISION`, default `HEAD`) and the application source is unchanged; it then pushes the images to the lab ICR registry before Kubernetes deployment.
+
+For enrolled sandboxes with zero persistent-volume quota and no NetworkPolicy permission, set `LAB_EPHEMERAL=1`. This uses bounded emptyDir volumes and cluster-internal services; MongoDB authentication and the API service key remain required. All review and account data is temporary and is lost when its database pod is replaced. This explicit course-lab profile is not suitable for durable hosting.
