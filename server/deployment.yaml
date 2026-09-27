@@ -96,11 +96,11 @@
                 "resources": {
                   "requests": {
                     "cpu": "10m",
-                    "memory": "256Mi"
+                    "memory": "768Mi"
                   },
                   "limits": {
                     "cpu": "250m",
-                    "memory": "256Mi"
+                    "memory": "768Mi"
                   }
                 },
                 "securityContext": {
@@ -363,6 +363,10 @@
                   {
                     "name": "TRUST_HTTPS_PROXY",
                     "value": "1"
+                  },
+                  {
+                    "name": "GUNICORN_CMD_ARGS",
+                    "value": "--no-control-socket"
                   }
                 ],
                 "resources": {
