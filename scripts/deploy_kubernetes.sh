@@ -64,8 +64,7 @@ if os.environ.get('LAB_EPHEMERAL') == '1':
     if 'persistentVolumeClaim' in volume:
      del volume['persistentVolumeClaim']
      volume['emptyDir']={'sizeLimit':'1Gi'}
-   if pod.get('volumes'):
-    pod['securityContext']={'fsGroup':10001}
+   # OpenShift assigns an allowed UID and volume group from the lab namespace.
  print('Temporary course-lab storage enabled; data lasts for the lifetime of each pod.')
 Path('evidence/deployment.yaml').write_text(json.dumps(manifest,indent=2)+'\n')
 PY
