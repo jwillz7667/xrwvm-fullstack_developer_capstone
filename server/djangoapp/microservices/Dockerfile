@@ -1,10 +1,9 @@
-FROM python:3.9.18-slim-bookworm
-
-
-WORKDIR /python-docker
-
-COPY requirements.txt requirements.txt
-RUN pip3 install -r requirements.txt
-COPY . .
-RUN ls
-CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0"]
+FROM python:3.13-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt && useradd --uid 10001 --create-home appuser
+COPY --chown=appuser:appuser app.py ./
+COPY --chown=appuser:appuser sentiment ./sentiment
+USER appuser
+EXPOSE 5050
+CMD ["gunicorn", "--bind", "0.0.0.0:5050", "--workers", "2", "--timeout", "30", "app:app"]

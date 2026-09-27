@@ -1,0 +1,9 @@
+frontend/node_modules
+frontend/dist
+database/node_modules
+data
+staticfiles
+*.log
+**/__pycache__
+**/.env
+**/.demo-credentials.json

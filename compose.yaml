@@ -1,0 +1,37 @@
+name: openroad-capstone
+services:
+  mongo:
+    image: mongo:8.0
+    volumes: [mongo-data:/data/db]
+    ports: ["127.0.0.1:27019:27017"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  dealers:
+    build: ./server/database
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/openroad
+      SERVICE_KEY: ${SERVICE_KEY:?Set SERVICE_KEY in .local-env}
+    ports: ["127.0.0.1:3030:3030"]
+    depends_on:
+      mongo: {condition: service_healthy}
+  sentiment:
+    build: ./server/djangoapp/microservices
+    ports: ["127.0.0.1:5050:5050"]
+  web:
+    build: ./server
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .local-env}
+      SERVICE_KEY: ${SERVICE_KEY}
+      BACKEND_URL: http://dealers:3030
+      SENTIMENT_URL: http://sentiment:5050
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      DATA_DIR: /data
+    ports: ["127.0.0.1:8016:8000"]
+    volumes: [django-data:/data]
+    depends_on: [dealers, sentiment]
+volumes:
+  mongo-data:
+  django-data:

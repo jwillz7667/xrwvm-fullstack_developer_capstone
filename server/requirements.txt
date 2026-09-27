@@ -1,5 +1,4 @@
-requests
-Django
-Pillow
-gunicorn
-python-dotenv
+Django==5.2.17
+requests==2.34.2
+gunicorn==26.2.0
+whitenoise==6.12.0

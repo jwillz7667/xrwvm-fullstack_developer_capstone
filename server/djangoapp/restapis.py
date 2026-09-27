@@ -1,22 +1,40 @@
-# Uncomment the imports below before you add the function code
-# import requests
-import os
-from dotenv import load_dotenv
+"""Bounded, server-to-server HTTP calls; never accept a client-provided URL."""
 
-load_dotenv()
+from urllib.parse import quote
+import requests
+from django.conf import settings
 
-backend_url = os.getenv(
-    'backend_url', default="http://localhost:3030")
-sentiment_analyzer_url = os.getenv(
-    'sentiment_analyzer_url',
-    default="http://localhost:5050/")
 
-# def get_request(endpoint, **kwargs):
-# Add code for get requests to back end
+class UpstreamError(Exception):
+    pass
 
-# def analyze_review_sentiments(text):
-# request_url = sentiment_analyzer_url+"analyze/"+text
-# Add code for retrieving sentiments
 
-# def post_review(data_dict):
-# Add code for posting review
+def request_json(method, path, payload=None):
+    try:
+        response = requests.request(
+            method,
+            settings.BACKEND_URL + path,
+            json=payload,
+            headers={"X-Service-Key": settings.SERVICE_KEY},
+            timeout=(3, 10),
+        )
+        response.raise_for_status()
+        return response.json()
+    except (requests.RequestException, ValueError) as error:
+        raise UpstreamError("The dealership service is temporarily unavailable.") from error
+
+
+def analyze_review_sentiments(text):
+    try:
+        response = requests.get(
+            settings.SENTIMENT_URL + "/analyze/" + quote(text, safe=""), timeout=(3, 8)
+        )
+        response.raise_for_status()
+        sentiment = response.json()["sentiment"]
+        if sentiment not in {"positive", "neutral", "negative"}:
+            raise ValueError("Invalid sentiment")
+        return sentiment
+    except (requests.RequestException, ValueError, KeyError) as error:
+        raise UpstreamError(
+            "The sentiment service is temporarily unavailable. Please try again."
+        ) from error

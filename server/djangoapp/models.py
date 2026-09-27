@@ -1,25 +1,40 @@
-# Uncomment the following imports before adding the Model code
+"""Relational vehicle catalog and shared authentication throttle."""
 
-# from django.db import models
-# from django.utils.timezone import now
-# from django.core.validators import MaxValueValidator, MinValueValidator
-
-
-# Create your models here.
-
-# <HINT> Create a Car Make model `class CarMake(models.Model)`:
-# - Name
-# - Description
-# - Any other fields you would like to include in car make model
-# - __str__ method to print a car make object
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db import models
 
 
-# <HINT> Create a Car Model model `class CarModel(models.Model):`:
-# - Many-To-One relationship to Car Make model (One Car Make has many
-# Car Models, using ForeignKey field)
-# - Name
-# - Type (CharField with a choices argument to provide limited choices
-# such as Sedan, SUV, WAGON, etc.)
-# - Year (IntegerField) with min value 2015 and max value 2023
-# - Any other fields you would like to include in car model
-# - __str__ method to print a car make object
+class CarMake(models.Model):
+    name = models.CharField(max_length=60, unique=True)
+    description = models.TextField(blank=True, max_length=1000)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class CarModel(models.Model):
+    car_make = models.ForeignKey(CarMake, on_delete=models.PROTECT, related_name="models")
+    name = models.CharField(max_length=80)
+    body_type = models.CharField(max_length=30)
+    year = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1900), MaxValueValidator(2100)]
+    )
+
+    class Meta:
+        ordering = ["car_make__name", "name", "year"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["car_make", "name", "year"], name="unique_vehicle_variant"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.car_make.name} {self.name} ({self.year})"
+
+
+class AuthAttempt(models.Model):
+    key = models.CharField(max_length=64, db_index=True)
+    created = models.DateTimeField(auto_now_add=True, db_index=True)

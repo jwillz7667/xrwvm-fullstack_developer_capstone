@@ -1,0 +1,48 @@
+name: Validate dealership application
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mongo:
+        image: mongo:8.0
+        ports: [27019:27017]
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DJANGO_DEBUG: '1'
+      SERVICE_KEY: ci-test-only-key-not-a-production-secret-12345
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: pip install -r server/requirements.txt -r server/djangoapp/microservices/requirements.txt -r requirements-dev.txt
+      - name: Lint Python
+        run: ruff check server && ruff format --check server
+      - name: Build and lint React
+        working-directory: server/frontend
+        run: npm ci && npm run lint && npm run build
+      - name: Validate Django, migrations, and authentication
+        run: |
+          python server/manage.py collectstatic --noinput
+          python server/manage.py check
+          python server/manage.py makemigrations --check --dry-run
+          python server/manage.py test djangoapp
+      - name: Test dealer service against MongoDB
+        working-directory: server/database
+        run: npm ci && node --check app.js && npm test
+      - name: Test sentiment service
+        run: python -m unittest discover -s server/djangoapp/microservices -p 'test_*.py'
