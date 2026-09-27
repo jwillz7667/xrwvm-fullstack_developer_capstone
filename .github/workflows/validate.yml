@@ -7,6 +7,40 @@ on:
 permissions:
   contents: read
 jobs:
+  lint-python:
+    name: Lint Python Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - name: Install lint dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Lint Python files
+        run: ruff check server && ruff format --check server
+  lint-javascript:
+    name: Lint JavaScript Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - name: Install frontend dependencies
+        working-directory: server/frontend
+        run: npm ci
+      - name: Lint JavaScript files
+        working-directory: server/frontend
+        run: npm run lint
+      - name: Check dealer service syntax
+        run: node --check server/database/app.js
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -30,11 +64,9 @@ jobs:
           python-version: '3.13'
       - name: Install Python dependencies
         run: pip install -r server/requirements.txt -r server/djangoapp/microservices/requirements.txt -r requirements-dev.txt
-      - name: Lint Python
-        run: ruff check server && ruff format --check server
-      - name: Build and lint React
+      - name: Build React
         working-directory: server/frontend
-        run: npm ci && npm run lint && npm run build
+        run: npm ci && npm run build
       - name: Validate Django, migrations, and authentication
         run: |
           python server/manage.py collectstatic --noinput
