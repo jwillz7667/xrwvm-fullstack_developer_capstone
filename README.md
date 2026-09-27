@@ -70,3 +70,5 @@ and secure cookies behind the lab HTTPS proxy. Do not enable
 `TRUST_HTTPS_PROXY` on a directly exposed server. The deployment scripts preserve
 existing resources and save actual runtime evidence under ignored `evidence/`.
 The free lab is temporary; this is a course deployment, not a production SLA.
+
+If the lab image mirror cannot build the maintained runtime, the same Linux/amd64 images may be built outside the lab and transferred as a checksum-verified Docker archive. The deployment script only reuses a prebuilt image when its OCI revision label exactly matches the checked-out source commit; it then pushes the images to the lab ICR registry before Kubernetes deployment.

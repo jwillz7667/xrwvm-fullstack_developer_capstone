@@ -37,7 +37,12 @@ for TASK_PART in web dealers; do
  TASK_DIR=server
  [[ "$TASK_PART" = dealers ]] && TASK_DIR=server/database
  TASK_IMAGE="us.icr.io/$TASK_NAMESPACE/openroad-$TASK_PART:$TASK_TAG"
- docker build -t "$TASK_IMAGE" "$TASK_DIR"
+ TASK_REVISION="$(git rev-parse HEAD)"
+ if [[ "$(docker image inspect --format='{{index .Config.Labels "org.opencontainers.image.revision"}}' "$TASK_IMAGE" 2>/dev/null || true)" != "$TASK_REVISION" ]]; then
+  docker build --label "org.opencontainers.image.revision=$TASK_REVISION" -t "$TASK_IMAGE" "$TASK_DIR"
+ else
+  echo "Using verified prebuilt image for source commit $TASK_REVISION: $TASK_IMAGE"
+ fi
  docker push "$TASK_IMAGE" | tee "evidence/push-$TASK_PART.txt"
  docker inspect --format='{{index .RepoDigests 0}}' "$TASK_IMAGE" > ".cloud-state/$TASK_PART.image"
 done
