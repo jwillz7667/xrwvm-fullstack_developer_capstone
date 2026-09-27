@@ -1,7 +1,7 @@
-FROM node:24-alpine AS frontend
+FROM node:24-bookworm-slim AS frontend
 WORKDIR /ui
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund --loglevel=verbose
 COPY frontend/ ./
 RUN npm run build
 FROM python:3.13-slim
