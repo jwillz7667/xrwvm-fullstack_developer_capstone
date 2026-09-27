@@ -24,6 +24,16 @@ def request_json(method, path, payload=None):
         raise UpstreamError("The dealership service is temporarily unavailable.") from error
 
 
+def get_request(path):
+    """Read a dealership endpoint through the configured backend service."""
+    return request_json("GET", path)
+
+
+def post_review(review):
+    """Submit a server-validated review using the backend service credential."""
+    return request_json("POST", "/insert_review", review)
+
+
 def analyze_review_sentiments(text):
     try:
         response = requests.get(

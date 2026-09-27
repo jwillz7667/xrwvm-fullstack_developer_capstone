@@ -17,7 +17,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 from .models import CarMake, CarModel, AuthAttempt
-from .restapis import request_json, analyze_review_sentiments, UpstreamError
+from .restapis import get_request, post_review, analyze_review_sentiments, UpstreamError
 
 User = get_user_model()
 
@@ -145,13 +145,13 @@ def get_dealerships(request, state=""):
     if len(state) > 50:
         raise ValueError("Invalid state.")
     endpoint = "/fetchDealers" + ("/" + quote(state, safe="") if state and state != "All" else "")
-    return JsonResponse({"status": 200, "dealers": request_json("GET", endpoint)})
+    return JsonResponse({"status": 200, "dealers": get_request(endpoint)})
 
 
 @require_GET
 @api_errors
 def get_dealer_details(request, dealer_id):
-    dealers = request_json("GET", f"/fetchDealer/{dealer_id}")
+    dealers = get_request(f"/fetchDealer/{dealer_id}")
     return JsonResponse(
         {"status": 200 if dealers else 404, "dealer": dealers}, status=200 if dealers else 404
     )
@@ -161,7 +161,7 @@ def get_dealer_details(request, dealer_id):
 @api_errors
 def get_dealer_reviews(request, dealer_id):
     return JsonResponse(
-        {"status": 200, "reviews": request_json("GET", f"/fetchReviews/dealer/{dealer_id}")}
+        {"status": 200, "reviews": get_request(f"/fetchReviews/dealer/{dealer_id}")}
     )
 
 
@@ -220,10 +220,10 @@ def add_review(request):
             car_year=car.year,
             purchase_date=purchased.isoformat(),
         )
-    if not request_json("GET", f"/fetchDealer/{dealer_id}"):
+    if not get_request(f"/fetchDealer/{dealer_id}"):
         return JsonResponse({"error": "Dealership not found."}, status=404)
     record["sentiment"] = analyze_review_sentiments(review)
-    saved = request_json("POST", "/insert_review", record)
+    saved = post_review(record)
     return JsonResponse({"status": 201, "review": saved}, status=201)
 
 

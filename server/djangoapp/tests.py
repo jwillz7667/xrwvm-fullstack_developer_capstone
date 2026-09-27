@@ -51,7 +51,7 @@ class PortalSecurityTests(TestCase):
         )
 
     @patch("djangoapp.views.analyze_review_sentiments", return_value="positive")
-    @patch("djangoapp.views.request_json")
+    @patch("djangoapp.restapis.request_json")
     def test_review_uses_authenticated_identity_not_forged_body(self, request_json, _sentiment):
         self.client.force_login(self.user)
         request_json.side_effect = [[{"id": 1}], {"id": "new-review"}]
