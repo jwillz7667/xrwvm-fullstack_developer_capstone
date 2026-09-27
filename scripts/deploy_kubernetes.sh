@@ -12,7 +12,7 @@ python3 - <<'PY'
 import os,re,urllib.parse
 u=urllib.parse.urlsplit(os.environ['SENTIMENT_URL'])
 assert u.scheme=='https' and u.hostname.endswith('.appdomain.cloud') and not u.query and not u.fragment
-assert re.fullmatch(r'[a-z0-9-]+(?:\.[a-z0-9-]+)*\.labs\.cognitiveclass\.ai',os.environ['APP_HOST'])
+assert re.fullmatch(r'[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:labs|proxy)\.cognitiveclass\.ai',os.environ['APP_HOST'])
 PY
 if [[ ! -e .cloud-state/owned ]]; then
  for TASK_RESOURCE in deployment/openroad-web deployment/openroad-mongo deployment/openroad-dealers secret/openroad-secrets; do
